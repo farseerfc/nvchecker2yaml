@@ -1,0 +1,26 @@
+#!/bin/sh
+
+showhelp() {
+    echo "This is a simple tool to help maintainers switch from nvchecker.ini to lilac.yaml"
+    echo "For more informations about lilac.yaml, see https://archlinuxcn.github.io/lilac/"
+    echo
+    echo "The semi-automated process follows the following steps: "
+    echo "  - Ask for the directory where your local clone of Arch CN repo locates"
+    echo "  - Ask for your email (the same one you put in nvchecker.ini)"
+    echo "  - Check for all your packages that haven't been switched to lilac.yaml"
+    echo "  - For every package that hasn't been switched: "
+    echo "      - Auto fit pre_build, post_build, post_build_always, "
+    echo "        time_limit_hours, update_on and maintainers in lilac.yaml"
+    echo "      - Ask if you want to change some of the above ones (especially maintainers)"
+    echo "      - If you used to use the archlinuxcn build prefix, ask if you want to "
+    echo "        use the new depends feature. Auto-fill this item is a considerable feature."
+    echo "      - Generate a preview of the new yaml file"
+    echo "      - Save to lilac.yaml, trim lilac.py and remove the package from nvchecker.ini"
+    echo "      - Git commit with message 'Switch [pkgname] to lilac.yaml'"
+    echo
+    echo "Specify a package or several packages will start the process for only those packages"
+    echo
+    echo "Use --help to view this message"
+}
+
+showhelp
