@@ -55,7 +55,8 @@ for n2ycmdi in $(seq 1 $#); do
         rm "${n2yuid}" -rf
         exit 0
     fi
-    n2ypkgnames[${n2ycmdi}]=${n2ycmd}
+    let n2ycmdim1=${n2ycmdi}-1
+    n2ypkgnames[${n2ycmdim1}]=${n2ycmd}
 done
 
 #获取CN源本地克隆地址
@@ -150,10 +151,11 @@ else
     #检查包名合法性
     n2yini=$(cat "${n2yuid}/part.ini")
     for n2ypkgnamei in $(seq 1 $#); do
-        if [[ ${n2yini} = *"[${n2ypkgnames[${n2ypkgnamei}]}]"* ]]; then
+        let n2ypkgnameim1=${n2ypkgnamei}-1
+        if [[ ${n2yini} = *"[${n2ypkgnames[${n2ypkgnameim1}]}]"* ]]; then
             continue
         fi
-        echo "Package ${n2ypkgnames[${n2ypkgnamei}]} cannot be found in your section of nvchecker.ini"
+        echo "Package ${n2ypkgnames[${n2ypkgnameim1}]} cannot be found in your section of nvchecker.ini"
         rm "${n2yuid}" -rf
         exit 255
     done
