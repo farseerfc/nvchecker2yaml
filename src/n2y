@@ -181,13 +181,38 @@ for n2ymaini in $(seq 0 ${n2ymaxmaini}); do
         fi
     done
 
-    bat "${n2yuid}/${n2ycurrentpkg}/lilac.update_on.yaml"
+    #bat "${n2yuid}/${n2ycurrentpkg}/lilac.update_on.yaml"
 
     if [[ ! -f lilac.py ]]; then
         echo "No lilac.py found. Ignoring."
     else
         cp lilac.py "${n2yuid}/${n2ycurrentpkg}"
         echo "Analyzing lilac.py"
+        #分析lilac.py，用以填写build_prefix，pre_build，post_build
+        echo "# Trimmed lilac.py" > "${n2yuid}/${n2ycurrentpkg}/lilac.new.py"
+        while IFS= read -r line; do
+            trimmedline=${line//\ /''}
+            if [[ ${trimmedline} = "build_prefix="* ]]; then
+                #build_prefix
+                n2ybuild_prefix=${trimmedline##*=}
+                echo "#${line}" >> "${n2yuid}/${n2ycurrentpkg}/lilac.new.py"
+            elif [[ ${trimmedline} = "pre_build="* ]]; then
+                #pre_build
+                n2ypre_build=${trimmedline##*=}
+                echo "#${line}" >> "${n2yuid}/${n2ycurrentpkg}/lilac.new.py"
+            elif [[ ${trimmedline} = "post_build="* ]]; then
+                #post_build
+                n2ypost_build=${trimmedline##*=}
+                echo "#${line}" >> "${n2yuid}/${n2ycurrentpkg}/lilac.new.py"
+            elif [[ ${trimmedline} = "if__name__=="* ]]; then
+                echo "#${line}" >> "${n2yuid}/${n2ycurrentpkg}/lilac.new.py"
+            elif [[ ${trimmedline} = "single_main"* ]]; then
+                echo "#${line}" >> "${n2yuid}/${n2ycurrentpkg}/lilac.new.py"
+            else
+                echo "${line}" >> "${n2yuid}/${n2ycurrentpkg}/lilac.new.py"
+            fi
+        done < "${n2yuid}/${n2ycurrentpkg}/lilac.py"
+        #bat "${n2yuid}/${n2ycurrentpkg}/lilac.new.py"
     fi
     rm "${n2yuid}/${n2ycurrentpkg}" -r
 done
