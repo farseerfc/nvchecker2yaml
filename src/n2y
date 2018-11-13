@@ -212,6 +212,9 @@ for n2ymaini in $(seq 0 ${n2ymaxmaini}); do
                 echo "${line}" >> "${n2yuid}/${n2ycurrentpkg}/lilac.new.py"
             fi
         done < "${n2yuid}/${n2ycurrentpkg}/lilac.py"
+        if [[ ${n2ybuild_prefix} ]]; then
+            
+        fi
         #bat "${n2yuid}/${n2ycurrentpkg}/lilac.new.py"
     fi
     rm "${n2yuid}/${n2ycurrentpkg}" -r
