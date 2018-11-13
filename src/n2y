@@ -24,10 +24,23 @@ showhelp() {
     echo "Use --help to view this message"
 }
 
+#获得一个随机字符串
+while true; do
+    n2yuid=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
+    n2yuid="/tmp/n2y_${n2yuid}"
+    if [[ ! -d n2yuid && ! -f n2yuid ]]; then
+        break;
+    fi
+done
+
+#创建临时目录
+mkdir "${n2yuid}"
+
 for n2ycmdi in $(seq 1 $#); do
     eval "n2ycmd=\${${n2ycmdi}}"
     if [[ ${n2ycmd} = "--help" ]]; then
         showhelp
+        rm "${n2yuid}" -rf
         exit 0
     fi
     n2ypkgnames[${n2ycmdi}]=${n2ycmd}
@@ -46,12 +59,71 @@ n2yrepodir=${n2yrepodir%\/}
 
 #检查路径合法性
 #nvchecker.ini
-if [[ ! -f ${n2yrepodir}\/nvchecker.ini ]]; then
+if [[ ! -f "${n2yrepodir}/nvchecker.ini" ]]; then
     echo "${n2yrepodir}/nvchecker.ini not found! This path is invalid. "
+    rm "${n2yuid}" -rf
     exit 255
 fi
 #.git
-if [[ ! -d ${n2yrepodir}\/.git ]]; then
+if [[ ! -d "${n2yrepodir}/.git" ]]; then
     echo "${n2yrepodir}/ is not a git repo! This path is invalid. "
+    rm "${n2yuid}" -rf
     exit 255
 fi
+
+#获取邮箱
+read -p "Your email used in nvchecker.ini: " n2yemail
+
+#从nvchecker里检查邮箱和维护包的开始行数
+n2ygrepout=$(cat "${n2yrepodir}/nvchecker.ini" | grep -in "<${n2yemail}>")
+if [[ $? -eq 0 ]]; then
+    n2yinilineindex=${n2ygrepout%:#*}
+    n2yinimtnname=${n2ygrepout#*:#\ }
+    n2yinimtnname=${n2yinimtnname%\ <*}
+else
+    echo "Can't find your email in nvchecker.ini. Note that this email is *NOT* case-sensitive. "
+    rm "${n2yuid}" -rf
+    exit 255
+fi
+
+#获取规范化的部分ini，储存于${n2yuid}/part.ini
+let n2yinilineindex_s=${n2yinilineindex}+1
+n2yinipart=$(tail --lines=+${n2yinilineindex_s} "${n2yrepodir}/nvchecker.ini")
+while read -r line; do
+    if [[ ${line} = *\{\{\{1 ]]; then
+        break
+    fi
+    if [[ ${line/\ /""} = "" ]]; then
+        continue
+    fi
+    echo "${line}" >> "${n2yuid}/part.ini"
+done <<< ${n2yinipart}
+
+if [[ $# -eq 0 ]]; then
+    #检查所有的包
+    n2ypkgcount=0
+    #获取包的名字
+    while read -r line; do
+        if [[ ${line} = *\[*\]* ]]; then
+            n2ytmppkgname=${line#*[}
+            n2ytmppkgname=${n2ytmppkgname%]*}
+            n2ypkgnames[${n2ypkgcount}]=${n2ytmppkgname}
+            let n2ypkgcount=${n2ypkgcount}+1
+            n2ypkgcount=${n2ypkgcount}
+        fi
+    done < "${n2yuid}/part.ini"
+else
+    #检查包名合法性
+    n2yini=$(cat "${n2yuid}/part.ini")
+    for n2ypkgnamei in $(seq 1 $#); do
+        if [[ ${n2yini} = *"[${n2ypkgnames[${n2ypkgnamei}]}]"* ]]; then
+            continue
+        fi
+        echo "Package ${n2ypkgnames[${n2ypkgnamei}]} cannot be found in your section of nvchecker.ini"
+        rm "${n2yuid}" -rf
+        exit 255
+    done
+fi
+
+#删除临时目录
+rm "${n2yuid}" -rf
