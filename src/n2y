@@ -136,6 +136,7 @@ fi
 let n2ymaxmaini=${n2ypkgcount}-1
 for n2ymaini in $(seq 0 ${n2ymaxmaini}); do
     n2ycurrentpkg=${n2ypkgnames[${n2ymaini}]}
+    n2ycurrentpkg=${n2ycurrentpkg//\ /''}
     echo "Now processing ${n2ycurrentpkg}"
     echo "Entering ${n2yrepodir}/${n2ycurrentpkg}"
     mkdir "${n2yuid}/${n2ycurrentpkg}"
@@ -143,8 +144,8 @@ for n2ymaini in $(seq 0 ${n2ymaxmaini}); do
 
     #（暴力）处理ini；灵梦风格，嗯（
     n2yinisection=$(cat "${n2yuid}/part.ini")
-    n2yinisection=${n2yinisection#*\[${n2ycurrentpkg}\]}
-    n2yinisection=${n2yinisection%[*}
+    n2yinisection=${n2yinisection##*\[${n2ycurrentpkg}\]}
+    n2yinisection=${n2yinisection%%[*}
     while read -r line; do
         line=${line//\ /''}
         lineitem=${line%%=*}
@@ -157,13 +158,16 @@ for n2ymaini in $(seq 0 ${n2ymaxmaini}); do
 
     #对应ini部分生成yaml的update_on
     echo "update_on:" > "${n2yuid}/${n2ycurrentpkg}/lilac.update_on.yaml"
+    n2yyamlupdateonprefix="  - "
     for testi in ${n2ynvcheckeritems[@]}; do
         eval "n2ycurrentval=\${${testi}}"
         eval "unset ${testi}"
         if [[ ${n2ycurrentval} ]]; then
-            echo "  - ${testi}: ${n2ycurrentval}" >> "${n2yuid}/${n2ycurrentpkg}/lilac.update_on.yaml"
+            echo "${n2yyamlupdateonprefix}${testi}: ${n2ycurrentval}" >> "${n2yuid}/${n2ycurrentpkg}/lilac.update_on.yaml"
+            n2yyamlupdateonprefix="    "
         elif [[ ${testi} = "aur" && ${n2yinisection//\ /''} = *"aur="* ]]; then
-            echo "  - ${testi}: ${n2ycurrentpkg}" >> "${n2yuid}/${n2ycurrentpkg}/lilac.update_on.yaml"
+            echo "${n2yyamlupdateonprefix}${testi}: ${n2ycurrentpkg}" >> "${n2yuid}/${n2ycurrentpkg}/lilac.update_on.yaml"
+            n2yyamlupdateonprefix="    "
         fi
     done
 
