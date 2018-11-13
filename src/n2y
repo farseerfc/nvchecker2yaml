@@ -1,5 +1,6 @@
 #!/bin/sh
 
+#显示帮助信息
 showhelp() {
     echo "This is a simple tool to help maintainers switch from nvchecker.ini to lilac.yaml"
     echo "For more informations about lilac.yaml, see https://archlinuxcn.github.io/lilac/"
@@ -23,4 +24,34 @@ showhelp() {
     echo "Use --help to view this message"
 }
 
-showhelp
+for n2ycmdi in $(seq 1 $#); do
+    eval "n2ycmd=\${${n2ycmdi}}"
+    if [[ ${n2ycmd} = "--help" ]]; then
+        showhelp
+        exit 0
+    fi
+    n2ypkgnames[${n2ycmdi}]=${n2ycmd}
+done
+
+#获取CN源本地克隆地址
+read -p "Path to your local clone of Arch CN repo [Current path]: " n2yrepodir
+
+#默认使用当前目录
+if [[ ! ${n2yrepodir} ]]; then
+    n2yrepodir=$PWD
+fi
+
+#规范化路径
+n2yrepodir=${n2yrepodir%\/}
+
+#检查路径合法性
+#nvchecker.ini
+if [[ ! -f ${n2yrepodir}\/nvchecker.ini ]]; then
+    echo "${n2yrepodir}/nvchecker.ini not found! This path is invalid. "
+    exit 255
+fi
+#.git
+if [[ ! -d ${n2yrepodir}\/.git ]]; then
+    echo "${n2yrepodir}/ is not a git repo! This path is invalid. "
+    exit 255
+fi
