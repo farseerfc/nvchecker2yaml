@@ -106,7 +106,7 @@ while read -r line; do
     if [[ ${line/\ /""} = "" ]]; then
         continue
     fi
-    echo "${line//\ /''}" >> "${n2yuid}/part.ini"
+    echo " ${line//\ /''}" >> "${n2yuid}/part.ini"
 done <<< ${n2yinipart}
 
 if [[ $# -eq 0 ]]; then
@@ -114,7 +114,7 @@ if [[ $# -eq 0 ]]; then
     n2ypkgcount=0
     #获取包的名字
     while read -r line; do
-        if [[ ${line} = \[*\] ]]; then
+        if [[ ${line//\ /''} = \[*\] ]]; then
             n2ytmppkgname=${line#*[}
             n2ytmppkgname=${n2ytmppkgname%]*}
             n2ypkgnames[${n2ypkgcount}]=${n2ytmppkgname}
@@ -148,8 +148,9 @@ for n2ymaini in $(seq 0 ${n2ymaxmaini}); do
     #（暴力）处理ini；灵梦风格，嗯（
     n2yinisection=$(cat "${n2yuid}/part.ini")
     n2yinisection=${n2yinisection##*\[${n2ycurrentpkg}\]}
-    n2yinisection=${n2yinisection%%[*}
+    n2yinisection=${n2yinisection%%\ [*}
     while read -r line; do
+        line=${line//\ /''}
         lineitem=${line%%=*}
         linevar=${line##*=}
         if [[ ${lineitem} = "strip-release" ]]; then
