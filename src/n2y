@@ -28,8 +28,8 @@ showhelp() {
     echo "      - Generate a preview of the new yaml file"
     echo "      - Save to lilac.yaml and trim lilac.py"
     echo "      - Git commit with message 'Switch [pkgname] to lilac.yaml'"
-    echo "      - Comment the packages in nvchecker.ini"
-    echo "      - Git commit with message 'Update nvchecker.ini'"
+    echo "  - Comment processed packages in nvchecker.ini"
+    echo "  - Git commit with message 'Update nvchecker.ini'"
     echo
     echo "Specify a package or several packages will start the process for only those packages"
     echo
