@@ -46,6 +46,7 @@ while true; do
 done
 
 #创建临时目录
+rm -rf "${n2yuid}"
 mkdir "${n2yuid}"
 
 for n2ycmdi in $(seq 1 $#); do
@@ -139,6 +140,12 @@ if [[ $# -eq 0 ]]; then
     n2ypkgcount=0
     #获取包的名字
     while read -r line; do
+        if [[ ${line//\ /''} = \;* ]]; then
+            continue
+        fi
+        if [[ ${line//\ /''} = \#* ]]; then
+            continue
+        fi
         if [[ ${line//\ /''} = \[*\] ]]; then
             n2ytmppkgname=${line#*[}
             n2ytmppkgname=${n2ytmppkgname%]*}
@@ -162,6 +169,8 @@ else
     n2ypkgcount=$#
 fi
 
+unset n2ycompletedpkg
+
 #逐个处理包
 let n2ymaxmaini=${n2ypkgcount}-1
 for n2ymaini in $(seq 0 ${n2ymaxmaini}); do
@@ -177,6 +186,12 @@ for n2ymaini in $(seq 0 ${n2ymaxmaini}); do
     n2yinisection=${n2yinisection%%\ [*}
     while read -r line; do
         line=${line//\ /''}
+        if [[ ${line} = \;* ]]; then
+            continue
+        fi
+        if [[ ${line} = \#* ]]; then
+            continue
+        fi
         lineitem=${line%%=*}
         linevar=${line##*=}
         if [[ ${lineitem} = "strip-release" ]]; then
@@ -272,40 +287,68 @@ for n2ymaini in $(seq 0 ${n2ymaxmaini}); do
     fi
     bat --paging=never "${n2yuid}/${n2ycurrentpkg}/lilac.new.yaml"
     echo "If you want to make some changes, do it now in ${n2yuid}/${n2ycurrentpkg}/"
-    read -p "Hit Enter to continue. Note that your lilac.py will be *OVERWRITTEN*" n2ynull
+    while true; do
+        read -p "Note that your lilac.py will be *OVERWRITTEN*. Continue? (y/n) [y]: " n2ynull
+        if [[ ! ${n2ynull} ]]; then
+            n2ynull=y
+        fi
+        if [[ ${n2ynull} = "y" ]]; then
+            break;
+        elif [[ ${n2ynull} = "n" ]]; then
+            break;
+        fi
+        echo "Invalid input"
+    done
     #应用更改
-    if [[ -f "${n2yuid}/${n2ycurrentpkg}/lilac.new.py" ]]; then
-        rm lilac.py -f
-        cp "${n2yuid}/${n2ycurrentpkg}/lilac.new.py" lilac.py
-        git add lilac.py
+    if [[ ${n2ynull} = "y" ]]; then
+        if [[ -f "${n2yuid}/${n2ycurrentpkg}/lilac.new.py" ]]; then
+            rm lilac.py -f
+            cp "${n2yuid}/${n2ycurrentpkg}/lilac.new.py" lilac.py
+            git add lilac.py
+        fi
+        cp "${n2yuid}/${n2ycurrentpkg}/lilac.new.yaml" lilac.yaml
+        #提交
+        git add lilac.yaml
+        git commit -m "Switch ${n2ycurrentpkg} to lilac.yaml"
+        n2ycompletedpkg="${n2ycompletedpkg}[${n2ycurrentpkg}]"
+    else
+        echo "Changes ignored"
     fi
-    cp "${n2yuid}/${n2ycurrentpkg}/lilac.new.yaml" lilac.yaml
-    #提交
-    git add lilac.yaml
-    git commit -m "Switch ${n2ycurrentpkg} to lilac.yaml"
-    cd ..
+    cd "${n2yrepodir}"
     rm "${n2yuid}/${n2ycurrentpkg}" -r
 done
 
-echo "Now commenting all your packages in nvchecker.ini for later manual remove"
+#处理nvchecker.ini
+echo "Now commenting out all processed packages in nvchecker.ini for later manual remove"
 commentflag=0
 while IFS= read -r line; do
     if [[ ${line//\ /''} = "" ]]; then
         echo "${line}" >> "${n2yuid}/nvchecker.new.ini"
         continue
     fi
+    if [[ ${line//\ /''} = \;* ]]; then
+        echo "${line}" >> "${n2yuid}/nvchecker.new.ini"
+        continue
+    fi
+    if [[ ${line//\ /''} = \#* ]]; then
+        echo "${line}" >> "${n2yuid}/nvchecker.new.ini"
+        continue
+    fi
+    if [[ ${line//\ /''} = \[*\] ]]; then
+        n2yinipropkg=${line##*\[}
+        n2yinipropkg=${n2yinipropkg%%\]*}
+        n2yinipropkg=${n2yinipropkg//\ /''}
+        if [[ ${n2ycompletedpkg} = *"[${n2yinipropkg}]"* ]]; then
+            echo "Commenting out ${n2yinipropkg}"
+            commentflag=1
+        else
+            commentflag=0
+        fi
+    fi
     if [[ ${commentflag} -eq 0 ]]; then
         echo "${line}" >> "${n2yuid}/nvchecker.new.ini"
     else
-        if [[ ${line} = *\{\{\{1* ]]; then
-            commentflag=0
-            echo "${line}" >> "${n2yuid}/nvchecker.new.ini"
-        else
-            echo ";${line}" >> "${n2yuid}/nvchecker.new.ini"
-        fi
-    fi
-    if [[ ${line} = *"${n2yinimtnname}"* && ${line} = *\{\{\{1* ]]; then
-        commentflag=1
+        echo ";${line}" >> "${n2yuid}/nvchecker.new.ini"
     fi
 done < "${n2yrepodir}/nvchecker.ini"
 
