@@ -79,18 +79,8 @@ processnvchecker() {
     git commit -m "Update nvchecker.ini: removing ${n2ycompletedpkg}"
 }
 
-#获得一个随机字符串
-while true; do
-    n2yuid=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
-    n2yuid="/tmp/n2y_${n2yuid}"
-    if [[ ! -d ${n2yuid} && ! -f ${n2yuid} ]]; then
-        break;
-    fi
-done
-
-#创建临时目录
-rm -rf "${n2yuid}"
-mkdir "${n2yuid}"
+# 创建临时目录
+n2yuid=$(mktemp -d /tmp/n2y_XXXXXXXX)
 
 for n2ycmdi in $(seq 1 $#); do
     eval "n2ycmd=\${${n2ycmdi}}"
@@ -278,16 +268,24 @@ for n2ymaini in $(seq 0 ${n2ymaxmaini}); do
         echo "# Trimmed lilac.py" > "${n2yuid}/${n2ycurrentpkg}/lilac.new.py"
         while IFS= read -r line; do
             trimmedline=${line//\ /''}
+            n2y_def_pre_build=false
+            n2y_def_post_build=false
             if [[ ${trimmedline} = "build_prefix="* ]]; then
                 #build_prefix
                 n2ybuild_prefix=${trimmedline##*=}
                 n2ybuild_prefix=${n2ybuild_prefix#\'}
                 n2ybuild_prefix=${n2ybuild_prefix%\'}
                 echo "#${line}" >> "${n2yuid}/${n2ycurrentpkg}/lilac.new.py"
+            elif [[ ${trimmedline} = "def pre_build"* ]]; then
+                n2y_def_pre_build=true
+                echo "${line}" >> "${n2yuid}/${n2ycurrentpkg}/lilac.new.py"
             elif [[ ${trimmedline} = "pre_build="* ]]; then
                 #pre_build
                 n2ypre_build=${trimmedline##*=}
                 echo "#${line}" >> "${n2yuid}/${n2ycurrentpkg}/lilac.new.py"
+            elif [[ ${trimmedline} = "def post_build"* ]]; then
+                n2y_def_post_build=true
+                echo "${line}" >> "${n2yuid}/${n2ycurrentpkg}/lilac.new.py"
             elif [[ ${trimmedline} = "post_build="* ]]; then
                 #post_build
                 n2ypost_build=${trimmedline##*=}
@@ -299,18 +297,23 @@ for n2ymaini in $(seq 0 ${n2ymaxmaini}); do
             else
                 echo "${line}" >> "${n2yuid}/${n2ycurrentpkg}/lilac.new.py"
             fi
+            
         done < "${n2yuid}/${n2ycurrentpkg}/lilac.old.py"
         if [[ ${n2ybuild_prefix} ]]; then
             echo "build_prefix: ${n2ybuild_prefix}" >> "${n2yuid}/${n2ycurrentpkg}/lilac.frompy.yaml"
             echo >> "${n2yuid}/${n2ycurrentpkg}/lilac.frompy.yaml"
         fi
-        if [[ ${n2ypre_build} ]]; then
-            echo "pre_build: ${n2ypre_build}" >> "${n2yuid}/${n2ycurrentpkg}/lilac.frompy.yaml"
-            echo >> "${n2yuid}/${n2ycurrentpkg}/lilac.frompy.yaml"
+        if [[ ${n2y_def_pre_build}=true ]]; then
+            if [[ ${n2ypre_build} ]]; then
+                echo "pre_build: ${n2ypre_build}" >> "${n2yuid}/${n2ycurrentpkg}/lilac.frompy.yaml"
+                echo >> "${n2yuid}/${n2ycurrentpkg}/lilac.frompy.yaml"
+            fi
         fi
-        if [[ ${n2ypost_build} ]]; then
-            echo "post_build: ${n2ypost_build}" >> "${n2yuid}/${n2ycurrentpkg}/lilac.frompy.yaml"
-            echo >> "${n2yuid}/${n2ycurrentpkg}/lilac.frompy.yaml"
+        if [[ ${n2y_def_pre_build}=true ]]; then
+            if [[ ${n2ypost_build} ]]; then
+                echo "post_build: ${n2ypost_build}" >> "${n2yuid}/${n2ycurrentpkg}/lilac.frompy.yaml"
+                echo >> "${n2yuid}/${n2ycurrentpkg}/lilac.frompy.yaml"
+            fi
         fi
     fi
     #组装yaml文件
